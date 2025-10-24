@@ -1,0 +1,59 @@
+# Source files
+src/
+*.ts
+!*.d.ts
+
+# Config files
+tsconfig.json
+.eslintrc.js
+.eslintrc.prepublish.js
+.prettierrc.js
+gulpfile.js
+
+# Documentation (keep only essential docs)
+CONTRIBUTING.md
+SETUP.md
+
+# Examples
+examples/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+test/
+tests/
+*.test.ts
+*.spec.ts
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Logs
+logs/
+*.log
+
+# Dependencies
+node_modules/
+
+# Build artifacts
+*.tsbuildinfo
+
+# Playwright
+playwright/.auth/
+cookies.json
+user-data/
+
+

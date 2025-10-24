@@ -1,0 +1,103 @@
+{
+  "name": "Pinterest Automation Example",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "resource": "search",
+        "operation": "search",
+        "query": "web development",
+        "scope": "pins",
+        "limit": 10
+      },
+      "name": "Search Pins",
+      "type": "n8n-nodes-pinterest-js-client.pinterest",
+      "typeVersion": 1,
+      "position": [450, 300],
+      "credentials": {
+        "pinterestApi": {
+          "id": "1",
+          "name": "Pinterest Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "pin",
+        "operation": "repin",
+        "pinUrl": "={{$json.data[0].url}}",
+        "boardName": "My Saved Pins"
+      },
+      "name": "Repin First Result",
+      "type": "n8n-nodes-pinterest-js-client.pinterest",
+      "typeVersion": 1,
+      "position": [650, 300],
+      "credentials": {
+        "pinterestApi": {
+          "id": "1",
+          "name": "Pinterest Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "pin",
+        "operation": "like",
+        "pinUrl": "={{$json.data[0].url}}"
+      },
+      "name": "Like Pin",
+      "type": "n8n-nodes-pinterest-js-client.pinterest",
+      "typeVersion": 1,
+      "position": [850, 300],
+      "credentials": {
+        "pinterestApi": {
+          "id": "1",
+          "name": "Pinterest Account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Search Pins",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Pins": {
+      "main": [
+        [
+          {
+            "node": "Repin First Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Repin First Result": {
+      "main": [
+        [
+          {
+            "node": "Like Pin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
+
+
