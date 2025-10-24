@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-pinterest-js-client",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "n8n node for Pinterest automation using pinterest-js-client with stealth features",
   "keywords": [
     "n8n-community-node-package",
@@ -27,7 +27,7 @@
     "lint:fix": "n8n-node lint --fix",
     "release": "n8n-node release",
     "prepublishOnly": "n8n-node prerelease",
-    "postinstall": "node -e \"try{require('playwright/lib/server');const{chromium}=require('playwright');console.log('Playwright detected, installing Chromium...');require('child_process').execSync('npx playwright install chromium',{stdio:'inherit'})}catch(e){console.log('Skipping Playwright setup')}\""
+    "postinstall": "npx --yes playwright install"
   },
   "files": [
     "dist",
