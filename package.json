@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-pinterest-js-client",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "n8n node for Pinterest automation using pinterest-js-client with stealth features",
   "keywords": [
     "n8n-community-node-package",
