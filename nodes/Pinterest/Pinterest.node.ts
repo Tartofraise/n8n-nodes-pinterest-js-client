@@ -569,10 +569,25 @@ export class Pinterest implements INodeType {
 			}
 		}
 
+		// Handle n8n's special blank value placeholder for password field
+		// n8n uses this placeholder when a password field is cleared
+		const password = credentials.password as string;
+		const isPasswordBlank = password?.startsWith('__n8n_BLANK_VALUE_');
+		const actualPassword = isPasswordBlank ? '' : password;
+
+		// Log password status (without logging the actual password for security)
+		if (isPasswordBlank) {
+			console.log('[Pinterest] Password field contains n8n blank placeholder - converting to empty string');
+		} else if (actualPassword && actualPassword.length > 0) {
+			console.log(`[Pinterest] Password provided (length: ${actualPassword.length} chars) - will be used for login if needed`);
+		} else {
+			console.log('[Pinterest] No password provided - will rely on cookies only');
+		}
+
 		// Initialize Pinterest client with cookie management
 		const client = new PinterestClient({
 			email: credentials.email as string,
-			password: credentials.password as string,
+			password: actualPassword,
 			headless: credentials.headless as boolean,
 			useFingerprintSuite: credentials.useFingerprintSuite as boolean,
 			cookies: storedCookies,
