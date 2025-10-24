@@ -7,7 +7,7 @@ import {
 } from 'n8n-workflow';
 
 // eslint-disable-next-line @n8n/community-nodes/no-restricted-imports
-import { PinterestClient } from 'pinterest-js-client';
+import { LogLevel, PinterestClient } from 'pinterest-js-client';
 
 export class Pinterest implements INodeType {
 	description: INodeTypeDescription = {
@@ -557,7 +557,7 @@ export class Pinterest implements INodeType {
 		// Get workflow static data for persistent cookie storage per workflow
 		const workflowStaticData = this.getWorkflowStaticData('node');
 		const credentialId = `${credentials.email}`;
-		
+
 		// Load cookies from workflow static data if available
 		let storedCookies: unknown[] = [];
 		if (workflowStaticData[credentialId]) {
@@ -588,6 +588,13 @@ export class Pinterest implements INodeType {
 					password: credentials.proxyPassword as string,
 				}
 				: undefined,
+			slowMo: 100,                  // Slow down actions by 100ms for more human-like behavior
+			timeout: 30000,               // Default timeout of 30 seconds
+			viewport: {
+				width: 1920,
+				height: 1080,
+			},
+			logLevel: LogLevel.DEBUG,
 		});
 
 		try {
