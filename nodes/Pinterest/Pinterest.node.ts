@@ -574,7 +574,7 @@ export class Pinterest implements INodeType {
 		const password = credentials.password as string;
 		const isPasswordBlank = password?.startsWith('__n8n_BLANK_VALUE_');
 		const actualPassword = isPasswordBlank ? '' : password;
-		console.log('actualPassword', actualPassword);
+
 		// Log password status (without logging the actual password for security)
 		if (isPasswordBlank) {
 			console.log('[Pinterest] Password field contains n8n blank placeholder - converting to empty string');
