@@ -6,12 +6,14 @@ This is an n8n community node that lets you use [Pinterest](https://www.pinteres
 
 [n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/reference/license/) workflow automation platform.
 
+> **⚠️ Important**: This node is designed for **self-hosted n8n instances only**. It requires the `pinterest-js-client` dependency with Puppeteer for browser-based authentication, which is not supported on n8n Cloud due to dependency restrictions.
+
 [Installation](#installation)  
 [Operations](#operations)  
 [Credentials](#credentials)  
 [Compatibility](#compatibility)  
 [Usage](#usage)  
-[Resources](#resources)  
+[Resources](#resources)
 
 ## Installation
 
