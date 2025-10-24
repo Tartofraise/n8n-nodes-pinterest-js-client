@@ -26,7 +26,8 @@
     "lint": "n8n-node lint",
     "lint:fix": "n8n-node lint --fix",
     "release": "n8n-node release",
-    "prepublishOnly": "n8n-node prerelease"
+    "prepublishOnly": "n8n-node prerelease",
+    "postinstall": "node -e \"try{require('playwright/lib/server');const{chromium}=require('playwright');console.log('Playwright detected, installing Chromium...');require('child_process').execSync('npx playwright install chromium',{stdio:'inherit'})}catch(e){console.log('Skipping Playwright setup')}\""
   },
   "files": [
     "dist",
