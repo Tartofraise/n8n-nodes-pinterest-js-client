@@ -78,6 +78,7 @@ To use this node, you need to configure Pinterest credentials:
 ### Security Notes
 
 - Credentials are stored securely in n8n's encrypted database
+- **Session Isolation**: Each workflow maintains its own session cookies (no conflicts between workflows)
 - The node uses [pinterest-js-client](https://github.com/Tartofraise/pinterest-js-client) which includes advanced stealth features
 - Browser fingerprinting and anti-detection measures are automatically applied
 - Supports proxy configuration for additional privacy
@@ -141,7 +142,7 @@ This node leverages pinterest-js-client's advanced features:
 - 🥷 **Undetected Browsing**: Uses fingerprint-suite for realistic browser fingerprints
 - 🤖 **Human-like Behavior**: Random delays, natural mouse movements, human typing
 - 🛡️ **Anti-Detection**: WebDriver masking, canvas & WebGL fingerprinting prevention
-- 🔄 **Session Persistence**: Automatic cookie management
+- 🔄 **Session Persistence**: Automatic cookie management per workflow (multi-account safe)
 - 🌐 **Proxy Support**: Full proxy configuration with authentication
 - ⚙️ **Highly Configurable**: Adjust headless mode, timeouts, and more
 
@@ -191,6 +192,11 @@ npm run format
 ```
 
 ## Version History
+
+### 1.0.1
+- **Fixed**: Cookie storage now per-workflow (no conflicts between multiple workflows/accounts)
+- **Improved**: Session management using workflow static data instead of shared files
+- Updated pinterest-js-client to 1.0.1
 
 ### 1.0.0
 - Initial release

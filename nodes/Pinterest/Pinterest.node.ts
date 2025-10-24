@@ -6,6 +6,7 @@ import {
 	NodeOperationError,
 } from 'n8n-workflow';
 
+// eslint-disable-next-line @n8n/community-nodes/no-restricted-imports
 import { PinterestClient } from 'pinterest-js-client';
 
 export class Pinterest implements INodeType {
@@ -71,16 +72,22 @@ export class Pinterest implements INodeType {
 				},
 				options: [
 					{
+						name: 'Comment',
+						value: 'comment',
+						description: 'Comment on a pin',
+						action: 'Comment on a pin',
+					},
+					{
 						name: 'Create',
 						value: 'create',
 						description: 'Create a new pin',
 						action: 'Create a pin',
 					},
 					{
-						name: 'Repin',
-						value: 'repin',
-						description: 'Save/repin a pin to a board',
-						action: 'Repin a pin',
+						name: 'Delete',
+						value: 'delete',
+						description: 'Delete a pin',
+						action: 'Delete a pin',
 					},
 					{
 						name: 'Like',
@@ -89,16 +96,10 @@ export class Pinterest implements INodeType {
 						action: 'Like a pin',
 					},
 					{
-						name: 'Comment',
-						value: 'comment',
-						description: 'Comment on a pin',
-						action: 'Comment on a pin',
-					},
-					{
-						name: 'Delete',
-						value: 'delete',
-						description: 'Delete a pin',
-						action: 'Delete a pin',
+						name: 'Repin',
+						value: 'repin',
+						description: 'Save/repin a pin to a board',
+						action: 'Repin a pin',
 					},
 				],
 				default: 'create',
@@ -291,7 +292,7 @@ export class Pinterest implements INodeType {
 						name: 'Get User Boards',
 						value: 'getUserBoards',
 						description: "Get a user's boards",
-						action: "Get a user's boards",
+						action: 'Get a user s boards',
 					},
 					{
 						name: 'Follow',
@@ -381,6 +382,9 @@ export class Pinterest implements INodeType {
 				displayName: 'Limit',
 				name: 'limit',
 				type: 'number',
+				typeOptions: {
+					minValue: 1,
+				},
 				displayOptions: {
 					show: {
 						resource: ['board'],
@@ -388,7 +392,7 @@ export class Pinterest implements INodeType {
 					},
 				},
 				default: 50,
-				description: 'Maximum number of pins to retrieve',
+				description: 'Max number of results to return',
 			},
 
 			// Board: Get User Boards
@@ -476,7 +480,7 @@ export class Pinterest implements INodeType {
 						name: 'Search',
 						value: 'search',
 						description: 'Search for pins, boards, or users',
-						action: 'Search Pinterest',
+						action: 'Search pinterest',
 					},
 				],
 				default: 'search',
@@ -528,16 +532,20 @@ export class Pinterest implements INodeType {
 				displayName: 'Limit',
 				name: 'limit',
 				type: 'number',
+				typeOptions: {
+					minValue: 1,
+				},
 				displayOptions: {
 					show: {
 						resource: ['search'],
 						operation: ['search'],
 					},
 				},
-				default: 20,
-				description: 'Maximum number of results to return',
+				default: 50,
+				description: 'Max number of results to return',
 			},
 		],
+		usableAsTool: true,
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
@@ -546,18 +554,39 @@ export class Pinterest implements INodeType {
 
 		const credentials = await this.getCredentials('pinterestApi');
 
-		// Initialize Pinterest client
+		// Get workflow static data for persistent cookie storage per workflow
+		const workflowStaticData = this.getWorkflowStaticData('node');
+		const credentialId = `${credentials.email}`;
+		
+		// Load cookies from workflow static data if available
+		let storedCookies: unknown[] = [];
+		if (workflowStaticData[credentialId]) {
+			try {
+				storedCookies = JSON.parse(workflowStaticData[credentialId] as string);
+			} catch {
+				// Invalid cookie data, start fresh
+				storedCookies = [];
+			}
+		}
+
+		// Initialize Pinterest client with cookie management
 		const client = new PinterestClient({
 			email: credentials.email as string,
 			password: credentials.password as string,
 			headless: credentials.headless as boolean,
 			useFingerprintSuite: credentials.useFingerprintSuite as boolean,
+			cookies: storedCookies,
+			disableFileCookies: true,  // Don't use file-based storage
+			onCookiesUpdate: async (cookies: unknown[]) => {
+				// Save cookies to workflow static data
+				workflowStaticData[credentialId] = JSON.stringify(cookies);
+			},
 			proxy: credentials.proxyServer
 				? {
-						server: credentials.proxyServer as string,
-						username: credentials.proxyUsername as string,
-						password: credentials.proxyPassword as string,
-				  }
+					server: credentials.proxyServer as string,
+					username: credentials.proxyUsername as string,
+					password: credentials.proxyPassword as string,
+				}
 				: undefined,
 		});
 
@@ -573,7 +602,7 @@ export class Pinterest implements INodeType {
 					const resource = this.getNodeParameter('resource', i) as string;
 					const operation = this.getNodeParameter('operation', i) as string;
 
-					let responseData: any;
+					let responseData: unknown;
 
 					if (resource === 'pin') {
 						if (operation === 'create') {
@@ -584,7 +613,7 @@ export class Pinterest implements INodeType {
 							const link = this.getNodeParameter('link', i, '') as string;
 							const altText = this.getNodeParameter('altText', i, '') as string;
 
-							const pinData: any = {
+							const pinData: Record<string, string> = {
 								title,
 								description,
 								link,
@@ -598,7 +627,7 @@ export class Pinterest implements INodeType {
 								pinData.imageFile = this.getNodeParameter('imageFile', i) as string;
 							}
 
-							responseData = await client.createPin(pinData);
+							responseData = await client.createPin(pinData as never);
 						} else if (operation === 'repin') {
 							const pinUrl = this.getNodeParameter('pinUrl', i) as string;
 							const boardName = this.getNodeParameter('boardName', i, '') as string;
@@ -665,7 +694,7 @@ export class Pinterest implements INodeType {
 
 					// Format the response
 					const executionData = this.helpers.constructExecutionMetaData(
-						this.helpers.returnJsonArray({ success: true, data: responseData }),
+						this.helpers.returnJsonArray({ success: true, data: responseData as never }),
 						{ itemData: { item: i } },
 					);
 

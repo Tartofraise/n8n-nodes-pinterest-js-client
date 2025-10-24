@@ -1,12 +1,28 @@
 import {
 	ICredentialType,
 	INodeProperties,
+	ICredentialTestRequest,
+	IAuthenticateGeneric,
 } from 'n8n-workflow';
 
 export class PinterestApi implements ICredentialType {
 	name = 'pinterestApi';
 	displayName = 'Pinterest API';
 	documentationUrl = 'https://github.com/Tartofraise/pinterest-js-client';
+	icon = 'file:pinterest.svg' as const;
+	
+	authenticate: IAuthenticateGeneric = {
+		type: 'generic',
+		properties: {},
+	};
+
+	test: ICredentialTestRequest = {
+		request: {
+			baseURL: 'https://www.pinterest.com',
+			url: '/',
+		},
+	};
+	
 	properties: INodeProperties[] = [
 		{
 			displayName: 'Email',
@@ -25,6 +41,13 @@ export class PinterestApi implements ICredentialType {
 			},
 			default: '',
 			required: true,
+		},
+		{
+			displayName: 'Cookies (Internal)',
+			name: 'cookies',
+			type: 'hidden',
+			default: '',
+			description: 'Session cookies stored automatically (do not edit manually)',
 		},
 		{
 			displayName: 'Headless Mode',
