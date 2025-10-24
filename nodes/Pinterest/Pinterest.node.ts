@@ -627,7 +627,12 @@ export class Pinterest implements INodeType {
 								pinData.imageFile = this.getNodeParameter('imageFile', i) as string;
 							}
 
-							responseData = await client.createPin(pinData as never);
+							const pinUrl = await client.createPin(pinData as never);
+							responseData = {
+								success: pinUrl !== null,
+								pinUrl: pinUrl,
+								message: pinUrl ? 'Pin created successfully' : 'Failed to create pin or could not retrieve URL'
+							};
 						} else if (operation === 'repin') {
 							const pinUrl = this.getNodeParameter('pinUrl', i) as string;
 							const boardName = this.getNodeParameter('boardName', i, '') as string;
