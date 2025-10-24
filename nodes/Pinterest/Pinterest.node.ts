@@ -601,7 +601,26 @@ export class Pinterest implements INodeType {
 			// Initialize and login
 			const isLoggedIn = await client.init();
 			if (!isLoggedIn) {
-				await client.login();
+				const loginSuccess = await client.login();
+				if (!loginSuccess) {
+					throw new NodeOperationError(
+						this.getNode(),
+						'Failed to login to Pinterest. Please check your credentials.',
+					);
+				}
+			} else {
+				// Even if we think we're logged in, verify authentication before operations
+				const isValid = await client.verifyAuthentication();
+				if (!isValid) {
+					// Cookies are invalid, try to re-login
+					const loginSuccess = await client.login();
+					if (!loginSuccess) {
+						throw new NodeOperationError(
+							this.getNode(),
+							'Authentication expired and re-login failed. Please check your credentials.',
+						);
+					}
+				}
 			}
 
 			for (let i = 0; i < items.length; i++) {
