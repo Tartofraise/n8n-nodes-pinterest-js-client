@@ -598,15 +598,23 @@ export class Pinterest implements INodeType {
 
 		const credentials = await this.getCredentials('pinterestApi');
 
-		// Get workflow static data for persistent cookie storage per workflow
-		const workflowStaticData = this.getWorkflowStaticData('node');
-		const credentialId = `${credentials.email}`;
+		// Get workflow static data for persistent cookie storage
+		// Using 'workflow' scope allows multiple nodes with THE SAME credentials to share cookies
+		// within the same workflow, avoiding redundant logins
+		// Key by email to ensure different credential sets remain isolated
+		//
+		// NOTE: Cookie sharing is limited to the same workflow due to n8n's architecture.
+		// Different workflows using the same credentials will maintain separate sessions.
+		// For true cross-workflow session sharing, an external storage solution (e.g., Redis, database)
+		// would be required, which is beyond the scope of this node's built-in functionality.
+		const workflowStaticData = this.getWorkflowStaticData('workflow');
+		const cookieStorageKey = `pinterest_cookies_${credentials.email}`;
 
 		// Load cookies from workflow static data if available
 		let storedCookies: unknown[] = [];
-		if (workflowStaticData[credentialId]) {
+		if (workflowStaticData[cookieStorageKey]) {
 			try {
-				storedCookies = JSON.parse(workflowStaticData[credentialId] as string);
+				storedCookies = JSON.parse(workflowStaticData[cookieStorageKey] as string);
 			} catch {
 				// Invalid cookie data, start fresh
 				storedCookies = [];
@@ -643,8 +651,10 @@ export class Pinterest implements INodeType {
 			cookies: storedCookies,
 			disableFileCookies: true,  // Don't use file-based storage
 			onCookiesUpdate: async (cookies: unknown[]) => {
-				// Save cookies to workflow static data
-				workflowStaticData[credentialId] = JSON.stringify(cookies);
+				// Save cookies to workflow static data keyed by credential email
+				// This allows nodes with the same credentials to share the session
+				// while keeping different credential sets isolated
+				workflowStaticData[cookieStorageKey] = JSON.stringify(cookies);
 			},
 			proxy: credentials.proxyServer
 				? {
