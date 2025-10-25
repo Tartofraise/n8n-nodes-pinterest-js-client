@@ -58,6 +58,50 @@ export class Pinterest implements INodeType {
 			},
 
 			// ===================================
+			// BROWSER OPTIONS
+			// ===================================
+			{
+				displayName: 'Slowmo (ms)',
+				name: 'slowMo',
+				type: 'number',
+				typeOptions: {
+					minValue: 0,
+				},
+				default: 0,
+				description: 'Slows down browser actions by specified milliseconds for more human-like behavior. 0 = fast typing (default).',
+			},
+			{
+				displayName: 'Timeout (ms)',
+				name: 'timeout',
+				type: 'number',
+				typeOptions: {
+					minValue: 1000,
+				},
+				default: 30000,
+				description: 'Maximum time in milliseconds to wait for browser operations',
+			},
+			{
+				displayName: 'Viewport Width',
+				name: 'viewportWidth',
+				type: 'number',
+				typeOptions: {
+					minValue: 800,
+				},
+				default: 1920,
+				description: 'Browser viewport width in pixels',
+			},
+			{
+				displayName: 'Viewport Height',
+				name: 'viewportHeight',
+				type: 'number',
+				typeOptions: {
+					minValue: 600,
+				},
+				default: 1080,
+				description: 'Browser viewport height in pixels',
+			},
+
+			// ===================================
 			// PIN OPERATIONS
 			// ===================================
 			{
@@ -584,6 +628,12 @@ export class Pinterest implements INodeType {
 			console.log('[Pinterest] No password provided - will rely on cookies only');
 		}
 
+		// Get browser configuration parameters (using first item as they're node-level settings)
+		const slowMo = this.getNodeParameter('slowMo', 0, 0) as number;
+		const timeout = this.getNodeParameter('timeout', 0, 30000) as number;
+		const viewportWidth = this.getNodeParameter('viewportWidth', 0, 1920) as number;
+		const viewportHeight = this.getNodeParameter('viewportHeight', 0, 1080) as number;
+
 		// Initialize Pinterest client with cookie management
 		const client = new PinterestClient({
 			email: credentials.email as string,
@@ -603,11 +653,11 @@ export class Pinterest implements INodeType {
 					password: credentials.proxyPassword as string,
 				}
 				: undefined,
-			slowMo: 100,                  // Slow down actions by 100ms for more human-like behavior
-			timeout: 30000,               // Default timeout of 30 seconds
+			slowMo,
+			timeout,
 			viewport: {
-				width: 1920,
-				height: 1080,
+				width: viewportWidth,
+				height: viewportHeight,
 			},
 			logLevel: LogLevel.DEBUG,
 		});
