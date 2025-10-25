@@ -61,7 +61,7 @@ export class Pinterest implements INodeType {
 			// BROWSER OPTIONS
 			// ===================================
 			{
-				displayName: 'Slowmo (ms)',
+				displayName: 'Slowmo (Ms)',
 				name: 'slowMo',
 				type: 'number',
 				typeOptions: {
@@ -71,7 +71,7 @@ export class Pinterest implements INodeType {
 				description: 'Slows down browser actions by specified milliseconds for more human-like behavior. 0 = fast typing (default).',
 			},
 			{
-				displayName: 'Timeout (ms)',
+				displayName: 'Timeout (Ms)',
 				name: 'timeout',
 				type: 'number',
 				typeOptions: {
