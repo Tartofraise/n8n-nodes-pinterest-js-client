@@ -610,10 +610,14 @@ export class Pinterest implements INodeType {
 		if (workflowStaticData[cookieStorageKey]) {
 			try {
 				storedCookies = JSON.parse(workflowStaticData[cookieStorageKey] as string);
-			} catch {
+				console.log(`[Pinterest n8n] ✓ Loaded ${storedCookies.length} cookies from global storage (key: ${cookieStorageKey})`);
+			} catch (error) {
 				// Invalid cookie data, start fresh
+				console.log(`[Pinterest n8n] ✗ Failed to parse stored cookies (key: ${cookieStorageKey}), starting fresh`);
 				storedCookies = [];
 			}
+		} else {
+			console.log(`[Pinterest n8n] ℹ No stored cookies found (key: ${cookieStorageKey}), will need to login`);
 		}
 
 		// Handle n8n's special blank value placeholder for password field
@@ -649,7 +653,9 @@ export class Pinterest implements INodeType {
 				// Save cookies to workflow static data keyed by credential email
 				// This allows nodes with the same credentials to share the session
 				// while keeping different credential sets isolated
+				console.log(`[Pinterest n8n] 💾 Saving ${cookies.length} cookies to global storage (key: ${cookieStorageKey})`);
 				workflowStaticData[cookieStorageKey] = JSON.stringify(cookies);
+				console.log(`[Pinterest n8n] ✓ Cookies saved successfully to global storage`);
 			},
 			proxy: credentials.proxyServer
 				? {
@@ -669,8 +675,10 @@ export class Pinterest implements INodeType {
 
 		try {
 			// Initialize and login
+			console.log(`[Pinterest n8n] 🔄 Initializing Pinterest client with ${storedCookies.length} cookies...`);
 			const isLoggedIn = await client.init();
 			if (!isLoggedIn) {
+				console.log(`[Pinterest n8n] 🔐 Stored cookies didn't work, performing fresh login...`);
 				const loginSuccess = await client.login();
 				if (!loginSuccess) {
 					throw new NodeOperationError(
@@ -678,6 +686,9 @@ export class Pinterest implements INodeType {
 						'Failed to login to Pinterest. Please check your credentials.',
 					);
 				}
+				console.log(`[Pinterest n8n] ✓ Fresh login successful`);
+			} else {
+				console.log(`[Pinterest n8n] ✓ Successfully authenticated using stored cookies`);
 			}
 
 			for (let i = 0; i < items.length; i++) {
@@ -711,10 +722,12 @@ export class Pinterest implements INodeType {
 							}
 
 							const pinUrl = await client.createPin(pinData as never);
+							if (!pinUrl) {
+								throw new Error('Failed to create pin or could not retrieve URL');
+							}
 							responseData = {
-								success: pinUrl !== null,
 								pinUrl: pinUrl,
-								message: pinUrl ? 'Pin created successfully' : 'Failed to create pin or could not retrieve URL'
+								message: 'Pin created successfully'
 							};
 						} else if (operation === 'repin') {
 							const pinUrl = this.getNodeParameter('pinUrl', i) as string;
@@ -782,7 +795,7 @@ export class Pinterest implements INodeType {
 
 					// Format the response
 					const executionData = this.helpers.constructExecutionMetaData(
-						this.helpers.returnJsonArray({ success: true, data: responseData as never }),
+						this.helpers.returnJsonArray(responseData as never),
 						{ itemData: { item: i } },
 					);
 
