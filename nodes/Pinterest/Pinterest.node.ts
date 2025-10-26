@@ -8,6 +8,7 @@ import {
 
 // eslint-disable-next-line @n8n/community-nodes/no-restricted-imports
 import { LogLevel, PinterestClient } from 'pinterest-js-client';
+import { getCookieStorage } from './cookieStorage';
 
 export class Pinterest implements INodeType {
 	description: INodeTypeDescription = {
@@ -598,26 +599,20 @@ export class Pinterest implements INodeType {
 
 		const credentials = await this.getCredentials('pinterestApi');
 
-		// Get workflow static data for persistent cookie storage
-		// Using 'global' scope allows cookies to be shared across ALL workflows and nodes
-		// that use the same credentials, avoiding redundant logins across the entire n8n instance
-		// Key by email to ensure different credential sets remain isolated
-		const workflowStaticData = this.getWorkflowStaticData('global');
-		const cookieStorageKey = `pinterest_cookies_${credentials.email}`;
+		// Get SQLite cookie storage instance
+		// This provides persistent cookie storage across ALL workflow executions
+		// (both manual and automatic) that use the same credentials
+		// Cookies are stored in ~/.n8n/pinterest-cookies/cookies.db
+		const cookieStorage = getCookieStorage();
+		const userEmail = credentials.email as string;
 
-		// Load cookies from workflow static data if available
-		let storedCookies: unknown[] = [];
-		if (workflowStaticData[cookieStorageKey]) {
-			try {
-				storedCookies = JSON.parse(workflowStaticData[cookieStorageKey] as string);
-				console.log(`[Pinterest n8n] ✓ Loaded ${storedCookies.length} cookies from global storage (key: ${cookieStorageKey})`);
-			} catch {
-				// Invalid cookie data, start fresh
-				console.log(`[Pinterest n8n] ✗ Failed to parse stored cookies (key: ${cookieStorageKey}), starting fresh`);
-				storedCookies = [];
-			}
+		// Load cookies from SQLite database
+		const storedCookies = cookieStorage.loadCookies(userEmail);
+		
+		if (storedCookies.length > 0) {
+			console.log(`[Pinterest n8n] ✓ Loaded ${storedCookies.length} cookies from SQLite database for ${userEmail}`);
 		} else {
-			console.log(`[Pinterest n8n] ℹ No stored cookies found (key: ${cookieStorageKey}), will need to login`);
+			console.log(`[Pinterest n8n] ℹ No stored cookies found in SQLite database for ${userEmail}, will need to login`);
 		}
 
 		// Handle n8n's special blank value placeholder for password field
@@ -650,12 +645,13 @@ export class Pinterest implements INodeType {
 			cookies: storedCookies,
 			disableFileCookies: true,  // Don't use file-based storage
 			onCookiesUpdate: async (cookies: unknown[]) => {
-				// Save cookies to workflow static data keyed by credential email
+				// Save cookies to SQLite database keyed by credential email
 				// This allows nodes with the same credentials to share the session
 				// while keeping different credential sets isolated
-				console.log(`[Pinterest n8n] 💾 Saving ${cookies.length} cookies to global storage (key: ${cookieStorageKey})`);
-				workflowStaticData[cookieStorageKey] = JSON.stringify(cookies);
-				console.log(`[Pinterest n8n] ✓ Cookies saved successfully to global storage`);
+				// Works for both manual and automatic workflow executions
+				console.log(`[Pinterest n8n] 💾 Saving ${cookies.length} cookies to SQLite database for ${userEmail}`);
+				cookieStorage.saveCookies(userEmail, cookies);
+				console.log(`[Pinterest n8n] ✓ Cookies saved successfully to SQLite database`);
 			},
 			proxy: credentials.proxyServer
 				? {

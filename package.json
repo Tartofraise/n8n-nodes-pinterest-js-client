@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-pinterest-js-client",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "description": "n8n node for Pinterest automation using pinterest-js-client with stealth features",
   "keywords": [
     "n8n-community-node-package",
@@ -47,6 +47,7 @@
   },
   "devDependencies": {
     "@n8n/node-cli": "*",
+    "@types/better-sqlite3": "^7.6.12",
     "eslint": "9.32.0",
     "prettier": "3.6.2",
     "release-it": "^19.0.4",
@@ -56,7 +57,8 @@
     "n8n-workflow": "*"
   },
   "dependencies": {
-    "pinterest-js-client": "^1.0.1"
+    "pinterest-js-client": "^1.0.1",
+    "better-sqlite3": "^11.0.0"
   },
   "engines": {
     "node": ">=18.17.0"
