@@ -611,7 +611,7 @@ export class Pinterest implements INodeType {
 			try {
 				storedCookies = JSON.parse(workflowStaticData[cookieStorageKey] as string);
 				console.log(`[Pinterest n8n] ✓ Loaded ${storedCookies.length} cookies from global storage (key: ${cookieStorageKey})`);
-			} catch (error) {
+			} catch {
 				// Invalid cookie data, start fresh
 				console.log(`[Pinterest n8n] ✗ Failed to parse stored cookies (key: ${cookieStorageKey}), starting fresh`);
 				storedCookies = [];
@@ -723,7 +723,10 @@ export class Pinterest implements INodeType {
 
 							const pinUrl = await client.createPin(pinData as never);
 							if (!pinUrl) {
-								throw new Error('Failed to create pin or could not retrieve URL');
+								throw new NodeOperationError(
+									this.getNode(),
+									'Failed to create pin or could not retrieve URL',
+								);
 							}
 							responseData = {
 								pinUrl: pinUrl,
