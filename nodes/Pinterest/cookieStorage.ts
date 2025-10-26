@@ -1,6 +1,4 @@
 // eslint-disable-next-line @n8n/community-nodes/no-restricted-imports
-import Database from 'better-sqlite3';
-// eslint-disable-next-line @n8n/community-nodes/no-restricted-imports
 import * as path from 'path';
 // eslint-disable-next-line @n8n/community-nodes/no-restricted-imports
 import * as os from 'os';
@@ -8,84 +6,132 @@ import * as os from 'os';
 import * as fs from 'fs';
 
 /**
- * SQLite-based cookie storage for n8n Pinterest node
+ * Interface for cookie storage entry
+ */
+interface CookieEntry {
+	email: string;
+	cookies: unknown[];
+	updatedAt: number;
+}
+
+/**
+ * JSON file-based cookie storage for n8n Pinterest node
  * Provides persistent cookie storage across all workflow executions
+ * No native dependencies required - works on all platforms
  */
 export class CookieStorage {
-	private db: Database.Database;
-	private dbPath: string;
+	private storageDir: string;
+	private indexPath: string;
+	private index: Map<string, CookieEntry>;
 
 	constructor() {
-		// Store the database in the user's home directory to ensure persistence
+		// Store cookies in the user's home directory to ensure persistence
 		// across n8n updates and restarts
-		const dbDir = path.join(os.homedir(), '.n8n', 'pinterest-cookies');
-		
+		this.storageDir = path.join(os.homedir(), '.n8n', 'pinterest-cookies');
+		this.indexPath = path.join(this.storageDir, 'index.json');
+
 		// Ensure directory exists
-		if (!fs.existsSync(dbDir)) {
-			fs.mkdirSync(dbDir, { recursive: true });
+		if (!fs.existsSync(this.storageDir)) {
+			fs.mkdirSync(this.storageDir, { recursive: true });
 		}
 
-		this.dbPath = path.join(dbDir, 'cookies.db');
-		console.log(`[CookieStorage] Database path: ${this.dbPath}`);
+		console.log(`[CookieStorage] Storage directory: ${this.storageDir}`);
 
-		// Initialize database
-		this.db = new Database(this.dbPath);
-		this.initializeDatabase();
+		// Load index
+		this.index = new Map();
+		this.loadIndex();
 	}
 
 	/**
-	 * Initialize database schema
+	 * Load the index from disk
 	 */
-	private initializeDatabase(): void {
-		// Create table if it doesn't exist
-		this.db.exec(`
-			CREATE TABLE IF NOT EXISTS cookies (
-				email TEXT PRIMARY KEY,
-				cookies TEXT NOT NULL,
-				updated_at INTEGER NOT NULL
-			)
-		`);
+	private loadIndex(): void {
+		try {
+			if (fs.existsSync(this.indexPath)) {
+				const data = fs.readFileSync(this.indexPath, 'utf-8');
+				const entries = JSON.parse(data) as CookieEntry[];
+				this.index = new Map(entries.map(entry => [entry.email, entry]));
+				console.log(`[CookieStorage] ✓ Loaded index with ${this.index.size} entries`);
+			} else {
+				console.log(`[CookieStorage] ℹ No index found, starting fresh`);
+			}
+		} catch (error) {
+			console.log(`[CookieStorage] ✗ Failed to load index:`, error);
+			this.index = new Map();
+		}
+	}
 
-		console.log(`[CookieStorage] ✓ Database initialized`);
+	/**
+	 * Save the index to disk
+	 */
+	private saveIndex(): void {
+		try {
+			const entries = Array.from(this.index.values());
+			fs.writeFileSync(this.indexPath, JSON.stringify(entries, null, 2), 'utf-8');
+		} catch (error) {
+			console.log(`[CookieStorage] ✗ Failed to save index:`, error);
+		}
+	}
+
+	/**
+	 * Get the file path for a specific email's cookies
+	 */
+	private getCookieFilePath(email: string): string {
+		// Use a safe filename based on email
+		const safeEmail = email.replace(/[^a-zA-Z0-9@._-]/g, '_');
+		return path.join(this.storageDir, `${safeEmail}.json`);
 	}
 
 	/**
 	 * Save cookies for a specific email
 	 */
 	saveCookies(email: string, cookies: unknown[]): void {
-		const cookiesJson = JSON.stringify(cookies);
 		const timestamp = Date.now();
+		const entry: CookieEntry = {
+			email,
+			cookies,
+			updatedAt: timestamp,
+		};
 
-		const stmt = this.db.prepare(`
-			INSERT OR REPLACE INTO cookies (email, cookies, updated_at)
-			VALUES (?, ?, ?)
-		`);
+		// Save cookie file
+		const filePath = this.getCookieFilePath(email);
+		try {
+			fs.writeFileSync(filePath, JSON.stringify(cookies, null, 2), 'utf-8');
+			
+			// Update index
+			this.index.set(email, entry);
+			this.saveIndex();
 
-		stmt.run(email, cookiesJson, timestamp);
-
-		console.log(`[CookieStorage] ✓ Saved ${cookies.length} cookies for ${email}`);
+			console.log(`[CookieStorage] ✓ Saved ${cookies.length} cookies for ${email}`);
+		} catch (error) {
+			console.log(`[CookieStorage] ✗ Failed to save cookies for ${email}:`, error);
+		}
 	}
 
 	/**
 	 * Load cookies for a specific email
 	 */
 	loadCookies(email: string): unknown[] {
-		const stmt = this.db.prepare(`
-			SELECT cookies, updated_at FROM cookies WHERE email = ?
-		`);
+		const filePath = this.getCookieFilePath(email);
 
-		const row = stmt.get(email) as { cookies: string; updated_at: number } | undefined;
-
-		if (row) {
-			try {
-				const cookies = JSON.parse(row.cookies) as unknown[];
-				const ageMinutes = Math.floor((Date.now() - row.updated_at) / 60000);
-				console.log(`[CookieStorage] ✓ Loaded ${cookies.length} cookies for ${email} (age: ${ageMinutes} minutes)`);
+		try {
+			if (fs.existsSync(filePath)) {
+				const data = fs.readFileSync(filePath, 'utf-8');
+				const cookies = JSON.parse(data) as unknown[];
+				
+				// Get age from index
+				const entry = this.index.get(email);
+				if (entry) {
+					const ageMinutes = Math.floor((Date.now() - entry.updatedAt) / 60000);
+					console.log(`[CookieStorage] ✓ Loaded ${cookies.length} cookies for ${email} (age: ${ageMinutes} minutes)`);
+				} else {
+					console.log(`[CookieStorage] ✓ Loaded ${cookies.length} cookies for ${email}`);
+				}
+				
 				return cookies;
-			} catch (error) {
-				console.log(`[CookieStorage] ✗ Failed to parse cookies for ${email}:`, error);
-				return [];
 			}
+		} catch (error) {
+			console.log(`[CookieStorage] ✗ Failed to load cookies for ${email}:`, error);
 		}
 
 		console.log(`[CookieStorage] ℹ No cookies found for ${email}`);
@@ -96,16 +142,19 @@ export class CookieStorage {
 	 * Delete cookies for a specific email
 	 */
 	deleteCookies(email: string): void {
-		const stmt = this.db.prepare(`
-			DELETE FROM cookies WHERE email = ?
-		`);
+		const filePath = this.getCookieFilePath(email);
 
-		const result = stmt.run(email);
-		
-		if (result.changes > 0) {
-			console.log(`[CookieStorage] ✓ Deleted cookies for ${email}`);
-		} else {
-			console.log(`[CookieStorage] ℹ No cookies to delete for ${email}`);
+		try {
+			if (fs.existsSync(filePath)) {
+				fs.unlinkSync(filePath);
+				this.index.delete(email);
+				this.saveIndex();
+				console.log(`[CookieStorage] ✓ Deleted cookies for ${email}`);
+			} else {
+				console.log(`[CookieStorage] ℹ No cookies to delete for ${email}`);
+			}
+		} catch (error) {
+			console.log(`[CookieStorage] ✗ Failed to delete cookies for ${email}:`, error);
 		}
 	}
 
@@ -113,12 +162,7 @@ export class CookieStorage {
 	 * Get all stored emails
 	 */
 	getAllEmails(): string[] {
-		const stmt = this.db.prepare(`
-			SELECT email FROM cookies ORDER BY updated_at DESC
-		`);
-
-		const rows = stmt.all() as { email: string }[];
-		return rows.map(row => row.email);
+		return Array.from(this.index.keys());
 	}
 
 	/**
@@ -126,44 +170,48 @@ export class CookieStorage {
 	 */
 	cleanupOldCookies(daysOld: number = 30): void {
 		const cutoffTime = Date.now() - (daysOld * 24 * 60 * 60 * 1000);
+		let cleanedCount = 0;
 
-		const stmt = this.db.prepare(`
-			DELETE FROM cookies WHERE updated_at < ?
-		`);
+		for (const [email, entry] of this.index.entries()) {
+			if (entry.updatedAt < cutoffTime) {
+				this.deleteCookies(email);
+				cleanedCount++;
+			}
+		}
 
-		const result = stmt.run(cutoffTime);
-
-		if (result.changes > 0) {
-			console.log(`[CookieStorage] ✓ Cleaned up ${result.changes} old cookie entries`);
+		if (cleanedCount > 0) {
+			console.log(`[CookieStorage] ✓ Cleaned up ${cleanedCount} old cookie entries`);
 		}
 	}
 
 	/**
-	 * Close database connection
+	 * Get storage stats
 	 */
-	close(): void {
-		this.db.close();
-		console.log(`[CookieStorage] ✓ Database connection closed`);
-	}
+	getStats(): { totalEntries: number; storageSizeKB: number } {
+		let totalSize = 0;
 
-	/**
-	 * Get database stats
-	 */
-	getStats(): { totalEntries: number; dbSizeKB: number } {
-		const countStmt = this.db.prepare(`SELECT COUNT(*) as count FROM cookies`);
-		const countRow = countStmt.get() as { count: number };
-
-		let dbSizeKB = 0;
 		try {
-			const stats = fs.statSync(this.dbPath);
-			dbSizeKB = Math.round(stats.size / 1024);
+			// Get size of all cookie files
+			for (const email of this.index.keys()) {
+				const filePath = this.getCookieFilePath(email);
+				if (fs.existsSync(filePath)) {
+					const stats = fs.statSync(filePath);
+					totalSize += stats.size;
+				}
+			}
+
+			// Add index file size
+			if (fs.existsSync(this.indexPath)) {
+				const indexStats = fs.statSync(this.indexPath);
+				totalSize += indexStats.size;
+			}
 		} catch {
-			// Ignore errors getting file size
+			// Ignore errors getting file sizes
 		}
 
 		return {
-			totalEntries: countRow.count,
-			dbSizeKB,
+			totalEntries: this.index.size,
+			storageSizeKB: Math.round(totalSize / 1024),
 		};
 	}
 }
@@ -180,14 +228,3 @@ export function getCookieStorage(): CookieStorage {
 	}
 	return cookieStorageInstance;
 }
-
-/**
- * Close the singleton instance (call during cleanup)
- */
-export function closeCookieStorage(): void {
-	if (cookieStorageInstance) {
-		cookieStorageInstance.close();
-		cookieStorageInstance = null;
-	}
-}
-

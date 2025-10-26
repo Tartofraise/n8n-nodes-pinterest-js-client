@@ -80,9 +80,8 @@ To use this node, you need to configure Pinterest credentials:
 ### Security Notes
 
 - Credentials are stored securely in n8n's encrypted database
-- **Persistent Session Storage**: Cookies are stored in a local SQLite database (`~/.n8n/pinterest-cookies/cookies.db`)
+- **Persistent Session Storage**: Cookies are stored as JSON files in `~/.n8n/pinterest-cookies/`
 - **Multi-Account Support**: Each Pinterest account (email) has isolated cookie storage
-- **Works with Manual & Automatic Executions**: Unlike workflow static data, SQLite persistence works in all execution contexts
 - The node uses [pinterest-js-client](https://github.com/Tartofraise/pinterest-js-client) which includes advanced stealth features
 - Browser fingerprinting and anti-detection measures are automatically applied
 - Supports proxy configuration for additional privacy
