@@ -599,15 +599,10 @@ export class Pinterest implements INodeType {
 		const credentials = await this.getCredentials('pinterestApi');
 
 		// Get workflow static data for persistent cookie storage
-		// Using 'workflow' scope allows multiple nodes with THE SAME credentials to share cookies
-		// within the same workflow, avoiding redundant logins
+		// Using 'global' scope allows cookies to be shared across ALL workflows and nodes
+		// that use the same credentials, avoiding redundant logins across the entire n8n instance
 		// Key by email to ensure different credential sets remain isolated
-		//
-		// NOTE: Cookie sharing is limited to the same workflow due to n8n's architecture.
-		// Different workflows using the same credentials will maintain separate sessions.
-		// For true cross-workflow session sharing, an external storage solution (e.g., Redis, database)
-		// would be required, which is beyond the scope of this node's built-in functionality.
-		const workflowStaticData = this.getWorkflowStaticData('workflow');
+		const workflowStaticData = this.getWorkflowStaticData('global');
 		const cookieStorageKey = `pinterest_cookies_${credentials.email}`;
 
 		// Load cookies from workflow static data if available
@@ -682,19 +677,6 @@ export class Pinterest implements INodeType {
 						this.getNode(),
 						'Failed to login to Pinterest. Please check your credentials.',
 					);
-				}
-			} else {
-				// Even if we think we're logged in, verify authentication before operations
-				const isValid = await client.verifyAuthentication();
-				if (!isValid) {
-					// Cookies are invalid, try to re-login
-					const loginSuccess = await client.login();
-					if (!loginSuccess) {
-						throw new NodeOperationError(
-							this.getNode(),
-							'Authentication expired and re-login failed. Please check your credentials.',
-						);
-					}
 				}
 			}
 
