@@ -662,7 +662,7 @@ export class Pinterest implements INodeType {
 				: undefined,
 			slowMo,
 			timeout,
-			viewport: {
+			viewport: { 
 				width: viewportWidth,
 				height: viewportHeight,
 			},
